@@ -11,6 +11,7 @@
 #include "caf/detail/default_invoke_result_visitor.hpp"
 #include "caf/detail/meta_object.hpp"
 #include "caf/detail/private_thread.hpp"
+#include "caf/detail/subscription_decorator.hpp"
 #include "caf/detail/sync_request_bouncer.hpp"
 #include "caf/detail/unsafe_flow_msg.hpp"
 #include "caf/inbound_path.hpp"
@@ -645,6 +646,15 @@ async::notifiable
 scheduled_actor::to_async_notifiable(async::notifiable::listener_ptr listener) {
   auto ptr = make_counted<detail::notifiable_impl>(this, std::move(listener));
   return async::notifiable{std::move(ptr)};
+}
+
+flow::subscription
+scheduled_actor::to_async_subscription(flow::subscription sub) {
+  using decorator = detail::subscription_decorator;
+  auto strong_ptr = strong_actor_ptr{ctrl()};
+  auto hdl = actor_cast<actor>(std::move(strong_ptr));
+  auto wrapped = make_counted<decorator>(std::move(hdl), std::move(sub));
+  return flow::subscription{std::move(wrapped)};
 }
 
 // -- message processing -------------------------------------------------------
@@ -1295,7 +1305,7 @@ void scheduled_actor::dispatch_cancel(flow::observable_base* source,
   flow_events_.emplace_back(flow_event{flow_event::cancel, source, sink, 0u});
 }
 
-void scheduled_actor::watch(flow::disposable obj) {
+void scheduled_actor::watch(disposable obj) {
   CAF_ASSERT(obj.valid());
   watched_disposables_.emplace_back(std::move(obj));
 }

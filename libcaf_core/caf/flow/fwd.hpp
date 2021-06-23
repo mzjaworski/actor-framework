@@ -112,4 +112,7 @@ struct has_impl_include {
 template <class T>
 constexpr bool has_impl_include_v = has_impl_include<T>::value;
 
+template <class T>
+class merger_impl;
+
 } // namespace caf::flow

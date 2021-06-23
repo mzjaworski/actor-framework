@@ -394,6 +394,9 @@ private:
 };
 
 template <class T>
+using buffered_observable_impl_ptr = intrusive_ptr<buffered_observable_impl<T>>;
+
+template <class T>
 struct term_step {
   buffered_observable_impl<T>* pimpl;
 
@@ -511,7 +514,7 @@ public:
     return observable<Out>{intrusive_ptr<buffered_processor_impl>(this)};
   }
 
-  typename observable<In>::impl* as_observable_ptr() noexcept override {
+  typename observable<Out>::impl* as_observable_ptr() noexcept override {
     return this;
   }
 

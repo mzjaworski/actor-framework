@@ -8,7 +8,7 @@
 #include "caf/intrusive_ptr.hpp"
 #include "caf/ref_counted.hpp"
 
-namespace caf::flow {
+namespace caf {
 
 /// Represents a disposable resource.
 class CAF_CORE_EXPORT disposable {
@@ -82,4 +82,4 @@ private:
   intrusive_ptr<impl> pimpl_;
 };
 
-} // namespace caf::flow
+} // namespace caf

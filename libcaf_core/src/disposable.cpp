@@ -4,10 +4,10 @@
 
 #include "caf/disposable.hpp"
 
-namespace caf::flow {
+namespace caf {
 
 disposable::impl::~impl() {
   // nop
 }
 
-} // namespace caf::flow
+} // namespace caf

@@ -502,6 +502,10 @@ public:
   async::notifiable
   to_async_notifiable(async::notifiable::listener_ptr listener);
 
+  /// Returns a decorator for `sub` that other actors (or threads) can safely
+  /// access.
+  flow::subscription to_async_subscription(flow::subscription sub);
+
   // -- inbound_path management ------------------------------------------------
 
   /// Creates a new path for incoming stream traffic from `sender`.
@@ -774,12 +778,12 @@ private:
   void dispatch_cancel(flow::observable_base* src,
                        flow::observer_base* snk) override;
 
-  void watch(flow::disposable what) override;
+  void watch(disposable what) override;
 
   void drop_disposed_flows();
 
   std::vector<flow_event> flow_events_;
-  std::vector<flow::disposable> watched_disposables_;
+  std::vector<disposable> watched_disposables_;
 };
 
 } // namespace caf

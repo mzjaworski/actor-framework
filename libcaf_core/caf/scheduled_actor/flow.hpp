@@ -6,6 +6,7 @@
 
 #include "caf/actor.hpp"
 #include "caf/async/batch.hpp"
+#include "caf/detail/subscription_decorator.hpp"
 #include "caf/detail/unsafe_flow_msg.hpp"
 #include "caf/disposable.hpp"
 #include "caf/flow/coordinator.hpp"
@@ -22,38 +23,6 @@ public:
   using coordinated_subscription = flow::coordinator::subscription_impl;
 
   using coordinated_subscription_ptr = flow::coordinator::subscription_impl_ptr;
-
-  class subscription_impl : public flow::subscription::impl {
-  public:
-    subscription_impl(actor hdl, flow::subscription decorated)
-      : hdl_(std::move(hdl)), decorated_(std::move(decorated)) {
-      // nop
-    }
-
-    ~subscription_impl() {
-      reset();
-    }
-
-    void cancel() override {
-      reset();
-    }
-
-    void request(size_t n) override {
-      anon_send(hdl_, unsafe_flow_msg{decorated_, n});
-    }
-
-  private:
-    void reset() {
-      if (hdl_) {
-        anon_send(hdl_, unsafe_flow_msg{decorated_});
-        hdl_ = nullptr;
-        decorated_ = nullptr;
-      }
-    }
-
-    actor hdl_;
-    flow::subscription decorated_;
-  };
 
   class forwarder_impl : public flow::observer<T>::impl {
   public:
@@ -92,7 +61,8 @@ public:
       CAF_ASSERT(dynamic_cast<coordinated_subscription*>(sub.ptr()) != nullptr);
       if (sink_ && !sub_) {
         sub_ = sub;
-        auto wrapped = make_counted<subscription_impl>(hdl_, std::move(sub));
+        using wrapper = detail::subscription_decorator;
+        auto wrapped = make_counted<wrapper>(hdl_, std::move(sub));
         sink_.on_attach(flow::subscription{std::move(wrapped)});
         return;
       }

@@ -130,6 +130,7 @@ caf_add_component(
     src/detail/simple_actor_clock.cpp
     src/detail/size_based_credit_controller.cpp
     src/detail/stringification_inspector.cpp
+    src/detail/subscription_decorator.cpp
     src/detail/sync_request_bouncer.cpp
     src/detail/test_actor_clock.cpp
     src/detail/thread_safe_actor_clock.cpp
