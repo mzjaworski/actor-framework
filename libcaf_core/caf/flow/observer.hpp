@@ -218,13 +218,15 @@ public:
     if (!completed_) {
       on_error_(what);
       sub_ = nullptr;
+      completed_ = true;
     }
   }
 
   void on_complete() override {
-    if (sub_) {
+    if (!completed_) {
       on_complete_();
       sub_ = nullptr;
+      completed_ = true;
     }
   }
 
@@ -232,14 +234,14 @@ public:
     if (!completed_ && !sub_) {
       sub_ = std::move(sub);
       sub_.request(defaults::flow::buffer_size);
-      return;
+    } else {
+      sub.cancel();
     }
-    sub.cancel();
   }
 
   void dispose() override {
     if (!completed_) {
-      on_complete();
+      on_complete_();
       if (sub_) {
         sub_.cancel();
         sub_ = nullptr;
