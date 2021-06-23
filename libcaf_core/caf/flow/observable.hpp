@@ -827,8 +827,13 @@ public:
     source.attach(observer<T>{std::move(fwd)});
   }
 
-  void add(observable<T> source) {
-    add(std::move(source), make_counted<forwarder>(this));
+  template <class Observable>
+  void add(Observable source) {
+    if constexpr (std::is_same_v<Observable, observable<T>>) {
+      add(std::move(source), make_counted<forwarder>(this));
+    } else {
+      add(std::move(source).as_observable(), make_counted<forwarder>(this));
+    }
   }
 
   bool done() const noexcept override {
@@ -949,6 +954,9 @@ private:
   flags_t flags;
   error delayed_error;
 };
+
+template <class T>
+using merger_impl_ptr = intrusive_ptr<merger_impl<T>>;
 
 template <class T, class F>
 class flat_map_observer_impl : public observer<T>::impl {
