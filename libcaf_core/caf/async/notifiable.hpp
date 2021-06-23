@@ -59,9 +59,9 @@ public:
   }
 
   notifiable() noexcept = default;
-  notifiable(notifiable&) noexcept = default;
+  notifiable(notifiable&&) noexcept = default;
   notifiable(const notifiable&) noexcept = default;
-  notifiable& operator=(notifiable&) noexcept = default;
+  notifiable& operator=(notifiable&&) noexcept = default;
   notifiable& operator=(const notifiable&) noexcept = default;
 
   bool valid() const noexcept {
