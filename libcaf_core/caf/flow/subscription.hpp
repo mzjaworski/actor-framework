@@ -13,8 +13,10 @@
 namespace caf::flow {
 
 /// Controls the flow of items from publishers to subscribers.
-class CAF_CORE_EXPORT subscription : public ref_counted {
+class CAF_CORE_EXPORT subscription {
 public:
+  // -- nested types -----------------------------------------------------------
+
   /// Internal impl of a `disposable`.
   class impl : public virtual ref_counted {
   public:
@@ -27,6 +29,8 @@ public:
     /// Signals demand for `n` more items.
     virtual void request(size_t n) = 0;
   };
+
+  // -- constructors, destructors, and assignment operators --------------------
 
   explicit subscription(intrusive_ptr<impl> pimpl) noexcept
     : pimpl_(std::move(pimpl)) {
@@ -44,6 +48,8 @@ public:
   subscription& operator=(subscription&&) noexcept = default;
   subscription& operator=(const subscription&) noexcept = default;
 
+  // -- demand signaling -------------------------------------------------------
+
   /// @copydoc impl::cancel
   void cancel() {
     if (pimpl_) {
@@ -58,6 +64,8 @@ public:
     pimpl_->request(n);
   }
 
+  // -- properties -------------------------------------------------------------
+
   bool valid() const noexcept {
     return pimpl_ != nullptr;
   }
@@ -70,11 +78,11 @@ public:
     return !valid();
   }
 
-  impl* ptr() {
+  impl* ptr() noexcept {
     return pimpl_.get();
   }
 
-  const impl* ptr() const {
+  const impl* ptr() const noexcept {
     return pimpl_.get();
   }
 
@@ -82,7 +90,9 @@ public:
     return std::move(pimpl_);
   }
 
-  void swap(subscription& other) {
+  // -- swapping ---------------------------------------------------------------
+
+  void swap(subscription& other) noexcept {
     pimpl_.swap(other.pimpl_);
   }
 
