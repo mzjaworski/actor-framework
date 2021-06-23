@@ -100,8 +100,36 @@ public:
   template <class OnNext>
   void blocking_for_each_while(OnNext fun) const;
 
+  bool valid() const noexcept {
+    return pimpl_ != nullptr;
+  }
+
+  explicit operator bool() const noexcept {
+    return valid();
+  }
+
+  bool operator!() const noexcept {
+    return !valid();
+  }
+
+  impl* ptr() {
+    return pimpl_.get();
+  }
+
+  const impl* ptr() const {
+    return pimpl_.get();
+  }
+
+  const intrusive_ptr<impl>& as_intrusive_ptr() const& noexcept {
+    return pimpl_;
+  }
+
   intrusive_ptr<impl>&& as_intrusive_ptr() && noexcept {
     return std::move(pimpl_);
+  }
+
+  void swap(publisher& other) {
+    pimpl_.swap(other.pimpl_);
   }
 
 private:

@@ -68,6 +68,14 @@ public:
     return pimpl_ != nullptr;
   }
 
+  explicit operator bool() const noexcept {
+    return valid();
+  }
+
+  bool operator!() const noexcept {
+    return !valid();
+  }
+
   /// @copydoc impl::notify
   void notify_event() {
     if (pimpl_)
