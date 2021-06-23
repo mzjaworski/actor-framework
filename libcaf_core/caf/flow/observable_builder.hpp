@@ -67,6 +67,32 @@ private:
   T value_;
 };
 
+template <class F>
+class callable_source {
+public:
+  using output_type = std::decay_t<decltype(std::declval<F&>()())>;
+
+  explicit callable_source(F fn) : fn_(std::move(fn)) {
+    // nop
+  }
+
+  callable_source(callable_source&&) = default;
+  callable_source& operator=(callable_source&&) = default;
+
+  callable_source(const callable_source&) = delete;
+  callable_source& operator=(const callable_source&) = delete;
+
+  template <class Step, class... Steps>
+  void pull(size_t n, Step& step, Steps&... steps) {
+    for (size_t i = 0; i < n; ++i)
+      if (!step.on_next(fn_(), steps...))
+        return;
+  }
+
+private:
+  F fn_;
+};
+
 class observable_builder {
 public:
   friend class coordinator;
@@ -83,6 +109,12 @@ public:
 
   template <class T>
   [[nodiscard]] auto just(T value) const;
+
+  template <class F>
+  [[nodiscard]] generation<callable_source<F>> from_callable(F fn) const;
+
+  template <class Pullable>
+  [[nodiscard]] generation<Pullable> lift(Pullable pullable) const;
 
 private:
   explicit observable_builder(coordinator* ctx) : ctx_(ctx) {
@@ -225,6 +257,20 @@ observable_builder::from_container(Container values) const {
 template <class T>
 auto observable_builder::just(T value) const {
   return repeat(std::move(value)).take(1);
+}
+
+// -- observable_builder::from_callable ----------------------------------------
+
+template <class F>
+generation<callable_source<F>> observable_builder::from_callable(F fn) const {
+  return {ctx_, callable_source<F>{std::move(fn)}};
+}
+
+// -- observable_builder::lift -------------------------------------------------
+
+template <class Pullable>
+generation<Pullable> observable_builder::lift(Pullable pullable) const {
+  return {ctx_, std::move(pullable)};
 }
 
 } // namespace caf::flow
