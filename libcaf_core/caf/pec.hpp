@@ -66,13 +66,15 @@ enum class pec : uint8_t {
   /// Stopped after running into an invalid parser state. Should never happen
   /// and most likely indicates a bug in the implementation.
   invalid_state,
+  /// Parser stopped after exceeding its maximum supported level of nesting.
+  nested_too_deeply,
 };
 
 /// @relates pec
 CAF_CORE_EXPORT std::string to_string(pec);
 
 /// @relates pec
-CAF_CORE_EXPORT bool from_string(string_view, pec&);
+CAF_CORE_EXPORT bool from_string(std::string_view, pec&);
 
 /// @relates pec
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<pec>, pec&);

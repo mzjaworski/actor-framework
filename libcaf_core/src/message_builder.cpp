@@ -33,11 +33,14 @@ message to_message_impl(size_t storage_size, TypeListBuilder& types,
     raw_ptr = new (vptr) message_data(types.copy_to_list());
   intrusive_cow_ptr<message_data> ptr{raw_ptr, false};
   auto storage = raw_ptr->storage();
-  for (auto& element : elements)
-    if constexpr (Policy == move_msg)
+  for (auto& element : elements) {
+    if constexpr (Policy == move_msg) {
       storage = element->move_init(storage);
-    else
+    } else {
       storage = element->copy_init(storage);
+    }
+    raw_ptr->inc_constructed_elements();
+  }
   return message{std::move(ptr)};
 }
 
@@ -48,13 +51,13 @@ public:
     // nop
   }
 
-  byte* copy_init(byte* storage) const override {
+  std::byte* copy_init(std::byte* storage) const override {
     auto* meta = global_meta_object(src_.type_at(index_));
     meta->copy_construct(storage, src_.data().at(index_));
     return storage + meta->padded_size;
   }
 
-  byte* move_init(byte* storage) override {
+  std::byte* move_init(std::byte* storage) override {
     return copy_init(storage);
   }
 

@@ -53,14 +53,17 @@ caf_add_component(
     PRIVATE
       CAF::internal
   ENUM_TYPES
+    async.read_result
+    async.write_result
     exit_reason
+    flow.observable_state
+    flow.observer_state
     intrusive.inbox_result
     intrusive.task_result
     invoke_message_result
     message_priority
     pec
     sec
-    stream_priority
   HEADERS
     ${CAF_CORE_HEADERS}
   SOURCES
@@ -81,6 +84,10 @@ caf_add_component(
     src/actor_registry.cpp
     src/actor_system.cpp
     src/actor_system_config.cpp
+    src/async/batch.cpp
+    src/async/consumer.cpp
+    src/async/execution_context.cpp
+    src/async/producer.cpp
     src/attachable.cpp
     src/behavior.cpp
     src/binary_deserializer.cpp
@@ -92,13 +99,12 @@ caf_add_component(
     src/config_value.cpp
     src/config_value_reader.cpp
     src/config_value_writer.cpp
-    src/credit_controller.cpp
     src/decorator/sequencer.cpp
     src/default_attachable.cpp
     src/deserializer.cpp
     src/detail/abstract_worker.cpp
     src/detail/abstract_worker_hub.cpp
-    src/detail/append_percent_encoded.cpp
+    src/detail/atomic_ref_counted.cpp
     src/detail/base64.cpp
     src/detail/behavior_impl.cpp
     src/detail/behavior_stack.cpp
@@ -119,34 +125,34 @@ caf_add_component(
     src/detail/monotonic_buffer_resource.cpp
     src/detail/parse.cpp
     src/detail/parser/chars.cpp
+    src/detail/plain_ref_counted.cpp
     src/detail/pretty_type_name.cpp
     src/detail/print.cpp
     src/detail/private_thread.cpp
     src/detail/private_thread_pool.cpp
     src/detail/ripemd_160.cpp
-    src/detail/serialized_size.cpp
     src/detail/set_thread_name.cpp
     src/detail/shared_spinlock.cpp
-    src/detail/size_based_credit_controller.cpp
     src/detail/stringification_inspector.cpp
     src/detail/sync_request_bouncer.cpp
     src/detail/test_actor_clock.cpp
     src/detail/thread_safe_actor_clock.cpp
-    src/detail/tick_emitter.cpp
-    src/detail/token_based_credit_controller.cpp
     src/detail/type_id_list_builder.cpp
     src/disposable.cpp
-    src/downstream_manager.cpp
-    src/downstream_manager_base.cpp
     src/error.cpp
     src/event_based_actor.cpp
     src/execution_unit.cpp
+    src/flow/coordinated.cpp
+    src/flow/coordinator.cpp
+    src/flow/observable_builder.cpp
+    src/flow/op/interval.cpp
+    src/flow/scoped_coordinator.cpp
+    src/flow/subscription.cpp
     src/forwarding_actor_proxy.cpp
     src/group.cpp
     src/group_manager.cpp
     src/group_module.cpp
     src/hash/sha1.cpp
-    src/inbound_path.cpp
     src/init_global_meta_objects.cpp
     src/ipv4_address.cpp
     src/ipv4_endpoint.cpp
@@ -166,8 +172,6 @@ caf_add_component(
     src/message_handler.cpp
     src/monitorable_actor.cpp
     src/node_id.cpp
-    src/outbound_path.cpp
-    src/policy/downstream_messages.cpp
     src/policy/unprofiled.cpp
     src/policy/work_sharing.cpp
     src/policy/work_stealing.cpp
@@ -186,8 +190,6 @@ caf_add_component(
     src/serializer.cpp
     src/settings.cpp
     src/skip.cpp
-    src/stream_aborter.cpp
-    src/stream_manager.cpp
     src/string_algorithms.cpp
     src/string_view.cpp
     src/telemetry/collector/prometheus.cpp
@@ -221,12 +223,16 @@ caf_add_component(
     actor_system_config
     actor_termination
     aout
+    async.blocking_consumer
+    async.blocking_producer
+    async.consumer_adapter
+    async.producer_adapter
+    async.promise
+    async.spsc_buffer
     behavior
     binary_deserializer
     binary_serializer
     blocking_actor
-    broadcast_downstream_manager
-    byte
     composition
     config_option
     config_option_set
@@ -235,7 +241,7 @@ caf_add_component(
     config_value_writer
     const_typed_message_view
     constructor_attach
-    continuous_streaming
+    cow_string
     cow_tuple
     decorator.sequencer
     deep_to_string
@@ -247,7 +253,6 @@ caf_add_component(
     detail.ieee_754
     detail.json
     detail.latch
-    detail.limited_vector
     detail.local_group_module
     detail.meta_object
     detail.monotonic_buffer_resource
@@ -264,18 +269,32 @@ caf_add_component(
     detail.private_thread_pool
     detail.ringbuffer
     detail.ripemd_160
-    detail.serialized_size
-    detail.tick_emitter
     detail.type_id_list_builder
     detail.unique_function
-    detail.unordered_flat_map
     dictionary
     dsl
     dynamic_spawn
     error
     expected
+    flow.concat
+    flow.concat_map
+    flow.defer
+    flow.empty
+    flow.fail
+    flow.flat_map
+    flow.for_each
+    flow.generation
+    flow.interval
+    flow.item_publisher
+    flow.merge
+    flow.mixed
+    flow.never
+    flow.observe_on
+    flow.prefix_and_tail
+    flow.publish
+    flow.single
+    flow.zip_with
     function_view
-    fused_downstream_manager
     handles
     hash.fnv
     hash.sha1
@@ -305,22 +324,19 @@ caf_add_component(
     metaprogramming
     mixin.requester
     mixin.sender
-    mock_streaming_classes
     mtl
-    native_streaming_classes
     node_id
     optional
     or_else
-    pipeline_streaming
     policy.categorized
     policy.select_all
     policy.select_any
     request_timeout
+    response_handle
     response_promise
     result
     save_inspector
     scheduled_actor
-    selective_streaming
     serial_reply
     serialization
     settings
@@ -329,7 +345,6 @@ caf_add_component(
     stateful_actor
     string_algorithms
     string_view
-    sum_type
     telemetry.collector.prometheus
     telemetry.counter
     telemetry.gauge
@@ -345,9 +360,9 @@ caf_add_component(
     typed_response_promise
     typed_spawn
     unit
+    unordered_flat_map
     uri
-    uuid
-    variant)
+    uuid)
 
 if(CAF_ENABLE_TESTING AND CAF_ENABLE_EXCEPTIONS)
   caf_add_test_suites(caf-core-test custom_exception_handler)

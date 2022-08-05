@@ -10,7 +10,6 @@
 #include "caf/binary_serializer.hpp"
 #include "caf/byte_buffer.hpp"
 #include "caf/config.hpp"
-#include "caf/detail/gcd.hpp"
 #include "caf/init_global_meta_objects.hpp"
 #include "caf/test/unit_test.hpp"
 
@@ -203,21 +202,21 @@ private:
 
 /// @private
 template <class... Ts>
-caf::optional<std::tuple<Ts...>> default_extract(caf_handle x) {
+std::optional<std::tuple<Ts...>> default_extract(caf_handle x) {
   auto ptr = x->peek_at_next_mailbox_element();
   if (ptr == nullptr)
-    return caf::none;
+    return std::nullopt;
   if (auto view = caf::make_const_typed_message_view<Ts...>(ptr->content()))
     return to_tuple(view);
-  return caf::none;
+  return std::nullopt;
 }
 
 /// @private
 template <class T>
-caf::optional<std::tuple<T>> unboxing_extract(caf_handle x) {
+std::optional<std::tuple<T>> unboxing_extract(caf_handle x) {
   auto tup = default_extract<typename T::outer_type>(x);
-  if (tup == caf::none || !is<T>(get<0>(*tup)))
-    return caf::none;
+  if (!tup || !is<T>(get<0>(*tup)))
+    return std::nullopt;
   return std::make_tuple(get<T>(get<0>(*tup)));
 }
 
@@ -227,22 +226,22 @@ caf::optional<std::tuple<T>> unboxing_extract(caf_handle x) {
 /// @private
 template <class T, bool HasOuterType, class... Ts>
 struct try_extract_impl {
-  caf::optional<std::tuple<T, Ts...>> operator()(caf_handle x) {
+  std::optional<std::tuple<T, Ts...>> operator()(caf_handle x) {
     return default_extract<T, Ts...>(x);
   }
 };
 
 template <class T>
 struct try_extract_impl<T, true> {
-  caf::optional<std::tuple<T>> operator()(caf_handle x) {
+  std::optional<std::tuple<T>> operator()(caf_handle x) {
     return unboxing_extract<T>(x);
   }
 };
 
 /// Returns the content of the next mailbox element as `tuple<T, Ts...>` on a
-/// match. Returns `none` otherwise.
+/// match. Returns `std::nullopt` otherwise.
 template <class T, class... Ts>
-caf::optional<std::tuple<T, Ts...>> try_extract(caf_handle x) {
+std::optional<std::tuple<T, Ts...>> try_extract(caf_handle x) {
   try_extract_impl<T, has_outer_type<T>::value, Ts...> f;
   return f(x);
 }
@@ -252,7 +251,7 @@ caf::optional<std::tuple<T, Ts...>> try_extract(caf_handle x) {
 /// element does not match `<T, Ts...>`.
 template <class T, class... Ts>
 std::tuple<T, Ts...> extract(caf_handle x, int src_line) {
-  if (auto result = try_extract<T, Ts...>(x); result != caf::none) {
+  if (auto result = try_extract<T, Ts...>(x)) {
     return std::move(*result);
   } else {
     auto ptr = x->peek_at_next_mailbox_element();
@@ -267,7 +266,7 @@ std::tuple<T, Ts...> extract(caf_handle x, int src_line) {
 
 template <class T, class... Ts>
 bool received(caf_handle x) {
-  return try_extract<T, Ts...>(x) != caf::none;
+  return try_extract<T, Ts...>(x) != std::nullopt;
 }
 
 template <class... Ts>
@@ -363,7 +362,7 @@ public:
 
   expect_clause(expect_clause&& other) = default;
 
-  void eval(const char* type_str, const char* fields_str) {
+  void eval(const char*, const char* fields_str) {
     using namespace caf;
     test::logger::instance().verbose()
       << term::yellow << "  -> " << term::reset
@@ -501,7 +500,7 @@ public:
     : sched_(sched), src_line_(src_line) {
     peek_ = [this] {
       if (dest_ != nullptr)
-        return try_extract<Ts...>(dest_) != caf::none;
+        return try_extract<Ts...>(dest_) != std::nullopt;
       else
         return false;
     };
@@ -533,7 +532,7 @@ public:
     peek_ = [this, tmp = std::make_tuple(std::forward<Us>(xs)...)] {
       using namespace caf::detail;
       if (dest_ != nullptr) {
-        if (auto ys = try_extract<Ts...>(dest_); ys != caf::none) {
+        if (auto ys = try_extract<Ts...>(dest_)) {
           elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
           auto ys_indices = get_indices(*ys);
           return apply_args(inspector, ys_indices, *ys);
@@ -592,7 +591,7 @@ public:
       if (src_ != nullptr && ptr->sender != src_)
         return;
       auto res = try_extract<Ts...>(dest_);
-      if (res != caf::none)
+      if (res)
         CAF_FAIL("received disallowed message: " << caf::deep_to_string(*ptr),
                  src_line_);
     };
@@ -623,7 +622,7 @@ public:
       if (src_ != nullptr && ptr->sender != src_)
         return;
       auto res = try_extract<Ts...>(dest_);
-      if (res != caf::none) {
+      if (res != std::nullopt) {
         using namespace caf::detail;
         elementwise_compare_inspector<decltype(tmp)> inspector{tmp};
         auto& ys = *res;
@@ -697,9 +696,6 @@ public:
       cfg.set("caf.middleman.workers", size_t{0});
       cfg.set("caf.middleman.heartbeat-interval", caf::timespan{0});
     }
-    cfg.set("caf.stream.credit-policy", "token-based");
-    cfg.set("caf.stream.token-based-policy.batch-size", 50);
-    cfg.set("caf.stream.token-based-policy.buffer-size", 200);
     return cfg;
   }
 
@@ -903,9 +899,9 @@ T unbox(caf::expected<T> x) {
 
 /// Unboxes an optional value or fails the test if it doesn't exist.
 template <class T>
-T unbox(caf::optional<T> x) {
+T unbox(std::optional<T> x) {
   if (!x)
-    CAF_FAIL("x == none");
+    CAF_FAIL("x == std::nullopt");
   return std::move(*x);
 }
 

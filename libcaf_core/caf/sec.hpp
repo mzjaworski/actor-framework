@@ -166,6 +166,19 @@ enum class sec : uint8_t {
   /// Signals that an actor fell behind a periodic action trigger. After raising
   /// this error, an @ref actor_clock stops scheduling the action.
   action_reschedule_failed,
+  /// Attaching to an observable failed because the target is invalid.
+  invalid_observable,
+  /// Attaching to an observable failed because the target already reached its
+  /// maximum observer count.
+  too_many_observers = 70,
+  /// Signals that an operation failed because the target has been disposed.
+  disposed,
+  /// Failed to open a resource.
+  cannot_open_resource,
+  /// Received malformed data on a network socket.
+  protocol_error,
+  /// Encountered faulty logic in the program.
+  logic_error,
 };
 // --(rst-sec-end)--
 
@@ -173,7 +186,7 @@ enum class sec : uint8_t {
 CAF_CORE_EXPORT std::string to_string(sec);
 
 /// @relates sec
-CAF_CORE_EXPORT bool from_string(string_view, sec&);
+CAF_CORE_EXPORT bool from_string(std::string_view, sec&);
 
 /// @relates sec
 CAF_CORE_EXPORT bool from_integer(std::underlying_type_t<sec>, sec&);

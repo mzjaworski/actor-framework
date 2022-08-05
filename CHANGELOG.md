@@ -5,6 +5,46 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Fixed
+
+- Passing a response promise to a run-delayed continuation could result in a
+  heap-use-after-free if the actor terminates before the action runs. The
+  destructor of the promise now checks for this case.
+- Accessing URI fields now always returns the normalized string.
+- The JSON parser no longer chokes when encountering `null` as last value before
+  the closing parenthesis.
+- The JSON reader now automatically widens integers to doubles as necessary.
+- Module options (e.g. for the `middleman`) now show up in `--long-help` output.
+- Fix undefined behavior in the Qt group chat example (#1336).
+- The `..._instance` convenience functions on the registry metric now properly
+  support `double` metrics and histograms.
+- Parsing deeply nested JSON inputs no longer produces a stack overflow.
+  Instead, the parser rejects any JSON with too many nesting levels.
+
+### Changed
+
+- Remote spawning of actors is no longer considered experimental.
+- The output of `--dump-config` now prints valid config file syntax.
+
+### Deprecated
+
+- The obsolete meta-programming utilities `replies_to` and `reacts_to` no longer
+  serve any purpose and are thus deprecated.
+- The types `caf::byte`, `caf::optional` and `caf::string_view` became obsolete
+  after switching to C++17. Consequently, these types are now deprecated in
+  favor of their standard library counterpart.
+
+### Removed
+
+- The template type `caf::variant` also became obsolete when switching to C++17.
+  Unfortunately, the implementation was not as standalone as its deprecated
+  companions and some of the free functions like `holds_alternative` were too
+  greedy and did not play nicely with ADL when using `std::variant` in the same
+  code base. Since fixing `caf::variant` does not seem to be worth the time
+  investment, we remove this type without a deprecation cycle.
+
+## [0.18.6]
+
 ### Added
 
 - When adding CAF with exceptions enabled (default), the unit test framework now
@@ -29,6 +69,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   newer EC-curve API.
 - When working with settings, `put`, `put_missing`, `get_if`, etc. now
   gracefully handle the `global` category when explicitly using it.
+- Messages created from a `message_builder` did not call the destructors for
+  their values, potentially causing memory leaks (#1321).
 
 ### Changed
 
@@ -782,7 +824,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.5...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.6...master
+[0.18.6]: https://github.com/actor-framework/actor-framework/releases/0.18.6
 [0.18.5]: https://github.com/actor-framework/actor-framework/releases/0.18.5
 [0.18.4]: https://github.com/actor-framework/actor-framework/releases/0.18.4
 [0.18.3]: https://github.com/actor-framework/actor-framework/releases/0.18.3

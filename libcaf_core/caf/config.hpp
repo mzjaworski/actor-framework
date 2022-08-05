@@ -22,7 +22,7 @@
 /// Denotes version of CAF in the format {MAJOR}{MINOR}{PATCH},
 /// whereas each number is a two-digit decimal number without
 /// leading zeros (e.g. 900 is version 0.9.0).
-#define CAF_VERSION 1805
+#define CAF_VERSION 1806
 
 /// Defined to the major version number of CAF.
 #define CAF_MAJOR_VERSION (CAF_VERSION / 10000)
@@ -240,6 +240,14 @@ struct IUnknown;
       ::abort();                                                               \
     }                                                                          \
     static_cast<void>(0)
+#endif
+
+// CAF_DEBUG_STMT(stmt): evaluates to stmt when compiling with runtime checks
+//                       and to an empty expression otherwise.
+#ifndef CAF_ENABLE_RUNTIME_CHECKS
+#  define CAF_DEBUG_STMT(stmt) static_cast<void>(0)
+#else
+#  define CAF_DEBUG_STMT(stmt) stmt
 #endif
 
 // Convenience macros.

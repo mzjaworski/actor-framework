@@ -38,7 +38,6 @@
 #include "caf/detail/get_mac_addresses.hpp"
 #include "caf/detail/ieee_754.hpp"
 #include "caf/detail/int_list.hpp"
-#include "caf/detail/safe_equal.hpp"
 #include "caf/detail/stringification_inspector.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/event_based_actor.hpp"
@@ -50,7 +49,6 @@
 #include "caf/ref_counted.hpp"
 #include "caf/sec.hpp"
 #include "caf/serializer.hpp"
-#include "caf/variant.hpp"
 
 struct opaque {
   int secret;
@@ -77,7 +75,8 @@ struct access_of {
     = std::is_same<decltype(inspect_access_type<Inspector, T>()), What>::value;
 };
 
-static_assert(access_of<bs, variant<int, double>>::is<iat::specialization>);
+static_assert(
+  access_of<bs, std::variant<int, double>>::is<iat::specialization>);
 
 static_assert(access_of<bs, sec>::is<iat::inspect>);
 
@@ -409,8 +408,8 @@ CAF_TEST(non_empty_vector) {
 
 CAF_TEST(variant_with_tree_types) {
   MESSAGE("deserializing into a non-empty vector overrides any content");
-  using test_variant = variant<int, double, std::string>;
-  test_variant x{42};
+  using test_variant = std::variant<int, double, std::string>;
+  auto x = test_variant{42};
   CHECK_EQ(x, roundtrip(x, false));
   x = 12.34;
   CHECK_EQ(x, roundtrip(x, false));

@@ -52,8 +52,8 @@ void metric_registry::merge(metric_registry& other) {
   other.families_.clear();
 }
 
-metric_family* metric_registry::fetch(const string_view& prefix,
-                                      const string_view& name) {
+metric_family* metric_registry::fetch(const std::string_view& prefix,
+                                      const std::string_view& name) {
   auto eq = [&](const auto& ptr) {
     return ptr->prefix() == prefix && ptr->name() == name;
   };
@@ -63,13 +63,22 @@ metric_family* metric_registry::fetch(const string_view& prefix,
   return nullptr;
 }
 
+std::vector<std::string_view>
+metric_registry::get_label_names(span_t<label_view> xs) {
+  std::vector<std::string_view> result;
+  result.reserve(xs.size());
+  for (auto& x : xs)
+    result.push_back(x.name());
+  return result;
+}
+
 std::vector<std::string>
-metric_registry::to_sorted_vec(span<const string_view> xs) {
+metric_registry::to_sorted_vec(span<const std::string_view> xs) {
   std::vector<std::string> result;
   if (!xs.empty()) {
     result.reserve(xs.size());
     for (auto x : xs)
-      result.emplace_back(to_string(x));
+      result.emplace_back(std::string{x});
     std::sort(result.begin(), result.end());
   }
   return result;
@@ -81,16 +90,16 @@ metric_registry::to_sorted_vec(span<const label_view> xs) {
   if (!xs.empty()) {
     result.reserve(xs.size());
     for (auto x : xs)
-      result.emplace_back(to_string(x.name()));
+      result.emplace_back(std::string{x.name()});
     std::sort(result.begin(), result.end());
   }
   return result;
 }
 
-void metric_registry::assert_properties(const metric_family* ptr,
-                                        metric_type type,
-                                        span<const string_view> label_names,
-                                        string_view unit, bool is_sum) {
+void metric_registry::assert_properties(
+  const metric_family* ptr, metric_type type,
+  span<const std::string_view> label_names, std::string_view unit,
+  bool is_sum) {
   auto labels_match = [&] {
     const auto& xs = ptr->label_names();
     const auto& ys = label_names;
@@ -111,15 +120,15 @@ void metric_registry::assert_properties(const metric_family* ptr,
 namespace {
 
 struct label_name_eq {
-  bool operator()(string_view x, string_view y) const noexcept {
+  bool operator()(std::string_view x, std::string_view y) const noexcept {
     return x == y;
   }
 
-  bool operator()(string_view x, const label_view& y) const noexcept {
+  bool operator()(std::string_view x, const label_view& y) const noexcept {
     return x == y.name();
   }
 
-  bool operator()(const label_view& x, string_view y) const noexcept {
+  bool operator()(const label_view& x, std::string_view y) const noexcept {
     return x.name() == y;
   }
 
@@ -133,7 +142,7 @@ struct label_name_eq {
 void metric_registry::assert_properties(const metric_family* ptr,
                                         metric_type type,
                                         span<const label_view> labels,
-                                        string_view unit, bool is_sum) {
+                                        std::string_view unit, bool is_sum) {
   auto labels_match = [&] {
     const auto& xs = ptr->label_names();
     const auto& ys = labels;

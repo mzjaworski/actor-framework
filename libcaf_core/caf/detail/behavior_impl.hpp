@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <optional>
 #include <tuple>
 #include <type_traits>
 #include <utility>
@@ -13,13 +14,11 @@
 #include "caf/detail/core_export.hpp"
 #include "caf/detail/int_list.hpp"
 #include "caf/detail/invoke_result_visitor.hpp"
-#include "caf/detail/tail_argument_token.hpp"
 #include "caf/detail/type_traits.hpp"
 #include "caf/intrusive_ptr.hpp"
 #include "caf/make_counted.hpp"
 #include "caf/message.hpp"
 #include "caf/none.hpp"
-#include "caf/optional.hpp"
 #include "caf/ref_counted.hpp"
 #include "caf/response_promise.hpp"
 #include "caf/skip.hpp"
@@ -27,7 +26,6 @@
 #include "caf/timespan.hpp"
 #include "caf/typed_message_view.hpp"
 #include "caf/typed_response_promise.hpp"
-#include "caf/variant.hpp"
 
 namespace caf {
 
@@ -51,7 +49,7 @@ public:
 
   virtual bool invoke(detail::invoke_result_visitor& f, message& xs) = 0;
 
-  optional<message> invoke(message&);
+  std::optional<message> invoke(message&);
 
   virtual void handle_timeout();
 

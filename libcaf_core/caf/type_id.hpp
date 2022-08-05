@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "caf/detail/core_export.hpp"
@@ -14,7 +15,6 @@
 #include "caf/detail/pp.hpp"
 #include "caf/detail/squashed_int.hpp"
 #include "caf/fwd.hpp"
-#include "caf/string_view.hpp"
 #include "caf/timespan.hpp"
 #include "caf/timestamp.hpp"
 
@@ -53,7 +53,7 @@ struct type_name_by_id;
 /// Convenience alias for `type_name_by_id<I>::value`.
 /// @relates type_name_by_id
 template <type_id_t I>
-constexpr string_view type_name_by_id_v = type_name_by_id<I>::value;
+constexpr std::string_view type_name_by_id_v = type_name_by_id<I>::value;
 
 /// Convenience type that resolves to `type_name_by_id<type_id_v<T>>`.
 template <class T>
@@ -63,13 +63,13 @@ struct type_name;
 /// manually.
 template <>
 struct type_name<void> {
-  static constexpr string_view value = "void";
+  static constexpr std::string_view value = "void";
 };
 
 /// Convenience alias for `type_name<T>::value`.
 /// @relates type_name
 template <class T>
-constexpr string_view type_name_v = type_name<T>::value;
+constexpr std::string_view type_name_v = type_name<T>::value;
 
 /// The first type ID not reserved by CAF and its modules.
 constexpr type_id_t first_custom_type_id = 200;
@@ -80,7 +80,7 @@ constexpr bool has_type_id_v = detail::is_complete<type_id<T>>;
 
 /// Returns `type_name_v<T>` if available, "anonymous" otherwise.
 template <class T>
-string_view type_name_or_anonymous() {
+std::string_view type_name_or_anonymous() {
   if constexpr (detail::is_complete<type_name<T>>)
     return type_name<T>::value;
   else
@@ -98,10 +98,10 @@ type_id_t type_id_or_invalid() {
 
 /// Returns the type name of given `type` or an empty string if `type` is an
 /// invalid ID.
-CAF_CORE_EXPORT string_view query_type_name(type_id_t type);
+CAF_CORE_EXPORT std::string_view query_type_name(type_id_t type);
 
 /// Returns the type of given `name` or `invalid_type_id` if no type matches.
-CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
+CAF_CORE_EXPORT type_id_t query_type_id(std::string_view name);
 
 } // namespace caf
 
@@ -153,7 +153,7 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
   };                                                                           \
   template <>                                                                  \
   struct type_name<::CAF_PP_EXPAND fully_qualified_name> {                     \
-    static constexpr string_view value                                         \
+    static constexpr std::string_view value                                    \
       = CAF_PP_STR(CAF_PP_EXPAND fully_qualified_name);                        \
   };                                                                           \
   template <>                                                                  \
@@ -170,7 +170,7 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
   };                                                                           \
   template <>                                                                  \
   struct type_name<::CAF_PP_EXPAND fully_qualified_name> {                     \
-    static constexpr string_view value = user_type_name;                       \
+    static constexpr std::string_view value = user_type_name;                  \
   };                                                                           \
   template <>                                                                  \
   struct type_name_by_id<type_id<::CAF_PP_EXPAND fully_qualified_name>::value> \
@@ -223,7 +223,8 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
   };                                                                           \
   template <>                                                                  \
   struct type_name<CAF_PP_EXPAND type_expr> {                                  \
-    static constexpr string_view value = CAF_PP_STR(CAF_PP_EXPAND type_expr);  \
+    static constexpr std::string_view value                                    \
+      = CAF_PP_STR(CAF_PP_EXPAND type_expr);                                   \
   };                                                                           \
   template <>                                                                  \
   struct type_name_by_id<type_id<CAF_PP_EXPAND type_expr>::value>              \
@@ -239,7 +240,7 @@ CAF_CORE_EXPORT type_id_t query_type_id(string_view name);
   };                                                                           \
   template <>                                                                  \
   struct type_name<CAF_PP_EXPAND type_expr> {                                  \
-    static constexpr string_view value = user_type_name;                       \
+    static constexpr std::string_view value = user_type_name;                  \
   };                                                                           \
   template <>                                                                  \
   struct type_name_by_id<type_id<CAF_PP_EXPAND type_expr>::value>              \
@@ -374,18 +375,16 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (std::set<std::string>) )
 
   // -- CAF types
-
   CAF_ADD_TYPE_ID(core_module, (caf::action))
   CAF_ADD_TYPE_ID(core_module, (caf::actor))
   CAF_ADD_TYPE_ID(core_module, (caf::actor_addr))
   CAF_ADD_TYPE_ID(core_module, (caf::byte_buffer))
   CAF_ADD_TYPE_ID(core_module, (caf::config_value))
+  CAF_ADD_TYPE_ID(core_module, (caf::cow_string))
+  CAF_ADD_TYPE_ID(core_module, (caf::cow_u16string))
+  CAF_ADD_TYPE_ID(core_module, (caf::cow_u32string))
   CAF_ADD_TYPE_ID(core_module, (caf::dictionary<caf::config_value>) )
   CAF_ADD_TYPE_ID(core_module, (caf::down_msg))
-  CAF_ADD_TYPE_ID(core_module, (caf::downstream_msg))
-  CAF_ADD_TYPE_ID(core_module, (caf::downstream_msg_batch))
-  CAF_ADD_TYPE_ID(core_module, (caf::downstream_msg_close))
-  CAF_ADD_TYPE_ID(core_module, (caf::downstream_msg_forced_close))
   CAF_ADD_TYPE_ID(core_module, (caf::error))
   CAF_ADD_TYPE_ID(core_module, (caf::exit_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::exit_reason))
@@ -403,20 +402,15 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::node_down_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::node_id))
   CAF_ADD_TYPE_ID(core_module, (caf::none_t))
-  CAF_ADD_TYPE_ID(core_module, (caf::open_stream_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::pec))
   CAF_ADD_TYPE_ID(core_module, (caf::sec))
-  CAF_ADD_TYPE_ID(core_module, (caf::stream_slots))
+  CAF_ADD_TYPE_ID(core_module, (caf::shared_action_ptr))
   CAF_ADD_TYPE_ID(core_module, (caf::strong_actor_ptr))
   CAF_ADD_TYPE_ID(core_module, (caf::timespan))
   CAF_ADD_TYPE_ID(core_module, (caf::timestamp))
   CAF_ADD_TYPE_ID(core_module, (caf::unit_t))
-  CAF_ADD_TYPE_ID(core_module, (caf::upstream_msg))
-  CAF_ADD_TYPE_ID(core_module, (caf::upstream_msg_ack_batch))
-  CAF_ADD_TYPE_ID(core_module, (caf::upstream_msg_ack_open))
-  CAF_ADD_TYPE_ID(core_module, (caf::upstream_msg_drop))
-  CAF_ADD_TYPE_ID(core_module, (caf::upstream_msg_forced_drop))
   CAF_ADD_TYPE_ID(core_module, (caf::uri))
+  CAF_ADD_TYPE_ID(core_module, (caf::uuid))
   CAF_ADD_TYPE_ID(core_module, (caf::weak_actor_ptr))
   CAF_ADD_TYPE_ID(core_module, (std::vector<caf::actor>) )
   CAF_ADD_TYPE_ID(core_module, (std::vector<caf::actor_addr>) )
@@ -459,7 +453,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_ATOM(core_module, caf, reset_atom)
   CAF_ADD_ATOM(core_module, caf, resolve_atom)
   CAF_ADD_ATOM(core_module, caf, spawn_atom)
-  CAF_ADD_ATOM(core_module, caf, stream_atom)
   CAF_ADD_ATOM(core_module, caf, sub_atom)
   CAF_ADD_ATOM(core_module, caf, subscribe_atom)
   CAF_ADD_ATOM(core_module, caf, sys_atom)

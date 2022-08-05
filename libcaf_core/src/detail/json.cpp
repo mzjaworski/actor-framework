@@ -19,6 +19,12 @@ CAF_PUSH_UNUSED_LABEL_WARNING
 
 #include "caf/detail/parser/fsm.hpp"
 
+namespace {
+
+constexpr size_t max_nesting_level = 128;
+
+} // namespace
+
 namespace caf::detail::parser {
 
 struct obj_consumer;
@@ -40,9 +46,9 @@ struct val_consumer {
 };
 
 struct key_consumer {
-  string_view* ptr;
+  std::string_view* ptr;
 
-  void value(string_view str) {
+  void value(std::string_view str) {
     *ptr = str;
   }
 };
@@ -93,7 +99,8 @@ obj_consumer val_consumer::begin_object() {
   return {&obj};
 }
 
-void read_value(string_parser_state& ps, val_consumer consumer);
+void read_value(string_parser_state& ps, size_t nesting_level,
+                val_consumer consumer);
 
 template <class Consumer>
 void read_json_null_or_nan(string_parser_state& ps, Consumer consumer) {
@@ -128,7 +135,7 @@ void read_json_null_or_nan(string_parser_state& ps, Consumer consumer) {
     transition(done, 'n', res_type = is_nan)
   }
   term_state(done) {
-    transition(init, " \t\n")
+    transition(done, " \t\n")
   }
   fin();
   // clang-format on
@@ -136,7 +143,7 @@ void read_json_null_or_nan(string_parser_state& ps, Consumer consumer) {
 
 template <class Consumer>
 void read_json_string(string_parser_state& ps, Consumer consumer) {
-  auto first = string_view::iterator{};
+  std::string_view::iterator first;
   // clang-format off
   start();
   state(init) {
@@ -145,7 +152,9 @@ void read_json_string(string_parser_state& ps, Consumer consumer) {
   }
   state(read_chars) {
     transition(escape, '\\')
-    transition(done, '"', consumer.value(string_view{first, ps.i}))
+    transition(done, '"',
+               consumer.value(std::string_view{
+                 std::addressof(*first), static_cast<size_t>(ps.i - first)}))
     transition(read_chars, any_char)
   }
   state(escape) {
@@ -159,7 +168,8 @@ void read_json_string(string_parser_state& ps, Consumer consumer) {
   // clang-format on
 }
 
-void read_member(string_parser_state& ps, member_consumer consumer) {
+void read_member(string_parser_state& ps, size_t nesting_level,
+                 member_consumer consumer) {
   // clang-format off
   start();
   state(init) {
@@ -168,7 +178,8 @@ void read_member(string_parser_state& ps, member_consumer consumer) {
   }
   state(after_key) {
     transition(after_key, " \t\n")
-    fsm_transition(read_value(ps, consumer.begin_val()), done, ':')
+    fsm_transition(read_value(ps, nesting_level, consumer.begin_val()),
+                   done, ':')
   }
   term_state(done) {
     transition(done, " \t\n")
@@ -177,7 +188,12 @@ void read_member(string_parser_state& ps, member_consumer consumer) {
   // clang-format on
 }
 
-void read_json_object(string_parser_state& ps, obj_consumer consumer) {
+void read_json_object(string_parser_state& ps, size_t nesting_level,
+                      obj_consumer consumer) {
+  if (nesting_level >= max_nesting_level) {
+    ps.code = pec::nested_too_deeply;
+    return;
+  }
   // clang-format off
   start();
   state(init) {
@@ -186,7 +202,8 @@ void read_json_object(string_parser_state& ps, obj_consumer consumer) {
   }
   state(has_open_brace) {
     transition(has_open_brace, " \t\n")
-    fsm_epsilon(read_member(ps, consumer.begin_member()), after_member, '"')
+    fsm_epsilon(read_member(ps, nesting_level + 1, consumer.begin_member()),
+                after_member, '"')
     transition(done, '}')
   }
   state(after_member) {
@@ -196,7 +213,8 @@ void read_json_object(string_parser_state& ps, obj_consumer consumer) {
   }
   state(after_comma) {
     transition(after_comma, " \t\n")
-    fsm_epsilon(read_member(ps, consumer.begin_member()), after_member, '"')
+    fsm_epsilon(read_member(ps, nesting_level + 1, consumer.begin_member()),
+                after_member, '"')
   }
   term_state(done) {
     transition(done, " \t\n")
@@ -205,7 +223,12 @@ void read_json_object(string_parser_state& ps, obj_consumer consumer) {
   // clang-format on
 }
 
-void read_json_array(string_parser_state& ps, arr_consumer consumer) {
+void read_json_array(string_parser_state& ps, size_t nesting_level,
+                     arr_consumer consumer) {
+  if (nesting_level >= max_nesting_level) {
+    ps.code = pec::nested_too_deeply;
+    return;
+  }
   // clang-format off
   start();
   state(init) {
@@ -215,7 +238,8 @@ void read_json_array(string_parser_state& ps, arr_consumer consumer) {
   state(has_open_brace) {
     transition(has_open_brace, " \t\n")
     transition(done, ']')
-    fsm_epsilon(read_value(ps, consumer.begin_value()), after_value)
+    fsm_epsilon(read_value(ps, nesting_level + 1, consumer.begin_value()),
+                after_value)
   }
   state(after_value) {
     transition(after_value, " \t\n")
@@ -224,7 +248,8 @@ void read_json_array(string_parser_state& ps, arr_consumer consumer) {
   }
   state(after_comma) {
     transition(after_comma, " \t\n")
-    fsm_epsilon(read_value(ps, consumer.begin_value()), after_value)
+    fsm_epsilon(read_value(ps, nesting_level + 1, consumer.begin_value()),
+                after_value)
   }
   term_state(done) {
     transition(done, " \t\n")
@@ -233,7 +258,8 @@ void read_json_array(string_parser_state& ps, arr_consumer consumer) {
   // clang-format on
 }
 
-void read_value(string_parser_state& ps, val_consumer consumer) {
+void read_value(string_parser_state& ps, size_t nesting_level,
+                val_consumer consumer) {
   // clang-format off
   start();
   state(init) {
@@ -242,8 +268,10 @@ void read_value(string_parser_state& ps, val_consumer consumer) {
     fsm_epsilon(read_bool(ps, consumer), done, "ft")
     fsm_epsilon(read_json_null_or_nan(ps, consumer), done, "n")
     fsm_epsilon(read_number(ps, consumer), done, "+-.0123456789")
-    fsm_epsilon(read_json_object(ps, consumer.begin_object()), done, '{')
-    fsm_epsilon(read_json_array(ps, consumer.begin_array()), done, '[')
+    fsm_epsilon(read_json_object(ps, nesting_level, consumer.begin_object()),
+                done, '{')
+    fsm_epsilon(read_json_array(ps, nesting_level, consumer.begin_array()),
+                done, '[')
   }
   term_state(done) {
     transition(done, " \t\n")
@@ -298,7 +326,7 @@ object* make_object(monotonic_buffer_resource* storage) {
 value* parse(string_parser_state& ps, monotonic_buffer_resource* storage) {
   monotonic_buffer_resource::allocator<value> alloc{storage};
   auto result = new (alloc.allocate(1)) value();
-  parser::read_value(ps, {storage, result});
+  parser::read_value(ps, 0, {storage, result});
   return result;
 }
 
