@@ -5,6 +5,43 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 
 ## [Unreleased]
 
+### Added
+
+- The new classes `json_value`, `json_array` and `json_object` allow working
+  with JSON inputs directly. Actors can also pass around JSON values safely.
+- Futures can now convert to observable values for making it easier to process
+  asynchronous results with data flows.
+
+### Fixed
+
+- The SPSC buffer now makes sure that subscribers get informed of a producer has
+  already left before the subscriber appeared and vice versa. This fixes a race
+  on the buffer that could cause indefinite hanging of an application.
+- Fused stages now properly forward errors during the initial subscription to
+  their observer.
+
+## [0.19.0-rc.1] - 2022-10-31
+
+### Added
+
+- CAF now ships an all-new "flow API". This allows users to express data flows
+  at a high level of abstraction with a ReactiveX-style interface. Please refer
+  to new examples and the documentation for more details, as this is a large
+  addition that we cannot cover in-depth here.
+- CAF has received a new module: `caf.net`. This module enables CAF applications
+  to interface with network protocols more directly than `caf.io`. The new
+  module contains many low-level building blocks for implementing bindings to
+  network protocols. However, CAF also ships ready-to-use, high-level APIs for
+  WebSocket and HTTP. Please have a look at our new examples that showcase the
+  new APIs!
+- To complement the flow API as well as the new networking module, CAF also
+  received a new set of `async` building blocks. Most notably, this includes
+  asynchronous buffers for the flow API and futures / promises that enable the
+  new HTTP request API. We plan on making these building blocks more general in
+  the future for supporting a wider range of use cases.
+- JSON inspectors now allow users to use a custom `type_id_mapper` to generate
+  and parse JSON text that uses different names for the types than the C++ API.
+
 ### Fixed
 
 - Passing a response promise to a run-delayed continuation could result in a
@@ -20,11 +57,23 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   support `double` metrics and histograms.
 - Parsing deeply nested JSON inputs no longer produces a stack overflow.
   Instead, the parser rejects any JSON with too many nesting levels.
+- The spinlock-based work-stealing implementation had severe performance issues
+  on Windows in some cases. We have switched to a regular, mutex-based approach
+  to avoid performance degradations. The new implementation also uses the
+  mutexes for interruptible waiting on the work queues, which improves the
+  responsiveness of the actor system (#1343).
 
 ### Changed
 
 - Remote spawning of actors is no longer considered experimental.
 - The output of `--dump-config` now prints valid config file syntax.
+- When starting a new thread via CAF, the thread hooks API now receives an
+  additional tag that identifies the component responsible for launching the new
+  thread.
+- Response promises now hold a strong reference to their parent actor to avoid
+  `broken_promise` errors in some (legitimate) edge cases (#1361).
+- The old, experimental `stream` API in CAF has been replaced by a new API that
+  is based on the new flow API.
 
 ### Deprecated
 
@@ -33,6 +82,16 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - The types `caf::byte`, `caf::optional` and `caf::string_view` became obsolete
   after switching to C++17. Consequently, these types are now deprecated in
   favor of their standard library counterpart.
+- The group-based pub/sub mechanism never fit nicely into the typed messaging
+  API and the fact that group messages use the regular mailbox makes it hard to
+  separate regular communication from multi-cast messages. Hence, we decided to
+  drop the group API and instead focus on the new flows and streams that can
+  replace group-communication in many use cases.
+- The "actor-composition operator" was added as a means to enable the first
+  experimental streaming API. With that gone, there's no justification to keep
+  this feature. While it has some neat niche-applications, the prevent some
+  optimization we would like to apply to the messaging layer. Hence, we will
+  remove this feature without a replacement.
 
 ### Removed
 
@@ -43,7 +102,7 @@ is based on [Keep a Changelog](https://keepachangelog.com).
   code base. Since fixing `caf::variant` does not seem to be worth the time
   investment, we remove this type without a deprecation cycle.
 
-## [0.18.6]
+## [0.18.6] - 2022-03-24
 
 ### Added
 
@@ -824,7 +883,8 @@ is based on [Keep a Changelog](https://keepachangelog.com).
 - Setting the log level to `quiet` now properly suppresses any log output.
 - Configuring colored terminal output should now print colored output.
 
-[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.18.6...master
+[Unreleased]: https://github.com/actor-framework/actor-framework/compare/0.19.0-rc.1...master
+[0.19.0-rc.1]: https://github.com/actor-framework/actor-framework/releases/0.19.0-rc.1
 [0.18.6]: https://github.com/actor-framework/actor-framework/releases/0.18.6
 [0.18.5]: https://github.com/actor-framework/actor-framework/releases/0.18.5
 [0.18.4]: https://github.com/actor-framework/actor-framework/releases/0.18.4

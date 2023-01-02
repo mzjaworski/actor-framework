@@ -8,6 +8,8 @@
 #include "caf/detail/print.hpp"
 #include "caf/string_algorithms.hpp"
 
+#include <fstream>
+
 namespace {
 
 static constexpr const char class_name[] = "caf::json_reader";
@@ -145,19 +147,41 @@ json_reader::~json_reader() {
 bool json_reader::load(std::string_view json_text) {
   reset();
   string_parser_state ps{json_text.begin(), json_text.end()};
+  root_ = detail::json::parse_shallow(ps, &buf_);
+  if (ps.code != pec::success) {
+    set_error(make_error(ps));
+    st_ = nullptr;
+    return false;
+  }
+  err_.reset();
+  detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
+  st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
+  st_->reserve(16);
+  st_->emplace_back(root_);
+  return true;
+}
+
+bool json_reader::load_file(const char* path) {
+  using iterator_t = std::istreambuf_iterator<char>;
+  reset();
+  std::ifstream input{path};
+  if (!input.is_open()) {
+    emplace_error(sec::cannot_open_file);
+    return false;
+  }
+  detail::json::file_parser_state ps{iterator_t{input}, iterator_t{}};
   root_ = detail::json::parse(ps, &buf_);
   if (ps.code != pec::success) {
     set_error(make_error(ps));
     st_ = nullptr;
     return false;
-  } else {
-    err_.reset();
-    detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
-    st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
-    st_->reserve(16);
-    st_->emplace_back(root_);
-    return true;
   }
+  err_.reset();
+  detail::monotonic_buffer_resource::allocator<stack_type> alloc{&buf_};
+  st_ = new (alloc.allocate(1)) stack_type(stack_allocator{&buf_});
+  st_->reserve(16);
+  st_->emplace_back(root_);
+  return true;
 }
 
 void json_reader::revert() {
@@ -182,7 +206,7 @@ void json_reader::reset() {
 bool json_reader::fetch_next_object_type(type_id_t& type) {
   std::string_view type_name;
   if (fetch_next_object_name(type_name)) {
-    if (auto id = query_type_id(type_name); id != invalid_type_id) {
+    if (auto id = (*mapper_)(type_name); id != invalid_type_id) {
       type = id;
       return true;
     } else {
@@ -311,7 +335,7 @@ bool json_reader::begin_field(std::string_view name, bool& is_present,
       member != nullptr
       && member->val->data.index() != detail::json::value::null_index) {
     auto ft = field_type(top<position::object>(), name, field_type_suffix_);
-    if (auto id = query_type_id(ft); id != invalid_type_id) {
+    if (auto id = (*mapper_)(ft); id != invalid_type_id) {
       if (auto i = std::find(types.begin(), types.end(), id);
           i != types.end()) {
         index = static_cast<size_t>(std::distance(types.begin(), i));

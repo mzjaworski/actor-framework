@@ -112,6 +112,16 @@ public:
     field_type_suffix_ = suffix;
   }
 
+  /// Returns the type ID mapper used by the writer.
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
+    return mapper_;
+  }
+
+  /// Changes the type ID mapper for the writer.
+  void mapper(const type_id_mapper* ptr) noexcept {
+    mapper_ = ptr;
+  }
+
   // -- modifiers --------------------------------------------------------------
 
   /// Parses @p json_text into an internal representation. After loading the
@@ -122,6 +132,17 @@ public:
   ///          until either destroying this reader or calling `reset`.
   /// @note Implicitly calls `reset`.
   bool load(std::string_view json_text);
+
+  /// Parses the content of the file under the given @p path. After loading the
+  /// content of the JSON file, the reader is ready for attempting to
+  /// deserialize inspectable objects.
+  /// @note Implicitly calls `reset`.
+  bool load_file(const char* path);
+
+  /// @copydoc load_file
+  bool load_file(const std::string& path) {
+    return load_file(path.c_str());
+  }
 
   /// Reverts the state of the reader back to where it was after calling `load`.
   /// @post The reader is ready for attempting to deserialize another
@@ -247,6 +268,12 @@ private:
 
   /// Keeps track of the current field for better debugging output.
   std::vector<std::string_view> field_;
+
+  /// The mapper implementation we use by default.
+  default_type_id_mapper default_mapper_;
+
+  /// Configures which ID mapper we use to translate between type IDs and names.
+  const type_id_mapper* mapper_ = &default_mapper_;
 };
 
 } // namespace caf

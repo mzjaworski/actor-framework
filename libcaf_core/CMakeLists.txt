@@ -64,6 +64,7 @@ caf_add_component(
     message_priority
     pec
     sec
+    thread_owner
   HEADERS
     ${CAF_CORE_HEADERS}
   SOURCES
@@ -132,7 +133,7 @@ caf_add_component(
     src/detail/private_thread_pool.cpp
     src/detail/ripemd_160.cpp
     src/detail/set_thread_name.cpp
-    src/detail/shared_spinlock.cpp
+    src/detail/stream_bridge.cpp
     src/detail/stringification_inspector.cpp
     src/detail/sync_request_bouncer.cpp
     src/detail/test_actor_clock.cpp
@@ -160,7 +161,11 @@ caf_add_component(
     src/ipv6_address.cpp
     src/ipv6_endpoint.cpp
     src/ipv6_subnet.cpp
+    src/json_array.cpp
+    src/json_builder.cpp
+    src/json_object.cpp
     src/json_reader.cpp
+    src/json_value.cpp
     src/json_writer.cpp
     src/load_inspector.cpp
     src/local_actor.cpp
@@ -190,6 +195,7 @@ caf_add_component(
     src/serializer.cpp
     src/settings.cpp
     src/skip.cpp
+    src/stream.cpp
     src/string_algorithms.cpp
     src/string_view.cpp
     src/telemetry/collector/prometheus.cpp
@@ -222,7 +228,6 @@ caf_add_component(
     actor_registry
     actor_system_config
     actor_termination
-    aout
     async.blocking_consumer
     async.blocking_producer
     async.consumer_adapter
@@ -233,7 +238,6 @@ caf_add_component(
     binary_deserializer
     binary_serializer
     blocking_actor
-    composition
     config_option
     config_option_set
     config_value
@@ -276,6 +280,7 @@ caf_add_component(
     dynamic_spawn
     error
     expected
+    flow.buffer
     flow.concat
     flow.concat_map
     flow.defer
@@ -312,7 +317,11 @@ caf_add_component(
     ipv6_address
     ipv6_endpoint
     ipv6_subnet
+    json_array
+    json_builder
+    json_object
     json_reader
+    json_value
     json_writer
     load_inspector
     logger
@@ -343,6 +352,7 @@ caf_add_component(
     simple_timeout
     span
     stateful_actor
+    stream
     string_algorithms
     string_view
     telemetry.collector.prometheus
@@ -359,6 +369,7 @@ caf_add_component(
     typed_message_view
     typed_response_promise
     typed_spawn
+    typed_stream
     unit
     unordered_flat_map
     uri

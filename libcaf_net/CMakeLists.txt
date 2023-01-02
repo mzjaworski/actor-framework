@@ -67,9 +67,11 @@ caf_add_component(
     src/net/ssl/context.cpp
     src/net/ssl/dtls.cpp
     src/net/ssl/format.cpp
+    src/net/ssl/password.cpp
     src/net/ssl/startup.cpp
     src/net/ssl/tls.cpp
     src/net/ssl/transport.cpp
+    src/net/ssl/verify.cpp
     src/net/stream_oriented.cpp
     src/net/stream_socket.cpp
     src/net/stream_transport.cpp
@@ -94,6 +96,7 @@ caf_add_component(
     detail.rfc6455
     net.accept_socket
     net.actor_shell
+    net.binary.frame
     net.datagram_socket
     net.http.server
     net.ip
@@ -112,5 +115,6 @@ caf_add_component(
     net.typed_actor_shell
     net.udp_datagram_socket
     net.web_socket.client
+    net.web_socket.frame
     net.web_socket.handshake
     net.web_socket.server)

@@ -25,10 +25,10 @@
 #include "caf/detail/set_thread_name.hpp"
 #include "caf/intrusive/task_result.hpp"
 #include "caf/local_actor.hpp"
-#include "caf/locks.hpp"
 #include "caf/message.hpp"
 #include "caf/string_algorithms.hpp"
 #include "caf/term.hpp"
+#include "caf/thread_owner.hpp"
 #include "caf/timestamp.hpp"
 
 namespace caf {
@@ -634,7 +634,7 @@ void logger::start() {
     auto f = [this](auto guard) {
       CAF_IGNORE_UNUSED(guard);
       detail::set_thread_name("caf.logger");
-      system_.thread_started();
+      system_.thread_started(thread_owner::system);
       run();
       system_.thread_terminates();
     };

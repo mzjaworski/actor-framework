@@ -96,12 +96,33 @@ type_id_t type_id_or_invalid() {
     return invalid_type_id;
 }
 
-/// Returns the type name of given `type` or an empty string if `type` is an
+/// Returns the type name for @p type or an empty string if @p type is an
 /// invalid ID.
 CAF_CORE_EXPORT std::string_view query_type_name(type_id_t type);
 
-/// Returns the type of given `name` or `invalid_type_id` if no type matches.
+/// Returns the type for @p name or `invalid_type_id` if @p name is unknown.
 CAF_CORE_EXPORT type_id_t query_type_id(std::string_view name);
+
+/// Translates between human-readable type names and type IDs.
+class CAF_CORE_EXPORT type_id_mapper {
+public:
+  virtual ~type_id_mapper();
+
+  /// Returns the type name for @p type or an empty string if @p type is an
+  /// invalid ID.
+  virtual std::string_view operator()(type_id_t type) const = 0;
+
+  /// Returns the type for @p name or `invalid_type_id` if @p name is unknown.
+  virtual type_id_t operator()(std::string_view name) const = 0;
+};
+
+/// Dispatches to @ref query_type_name and @ref query_type_id.
+class default_type_id_mapper : public type_id_mapper {
+public:
+  std::string_view operator()(type_id_t type) const override;
+
+  type_id_t operator()(std::string_view name) const override;
+};
 
 } // namespace caf
 
@@ -352,7 +373,7 @@ CAF_CORE_EXPORT type_id_t query_type_id(std::string_view name);
 
 CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
 
-  // -- C types
+  // -- C types ----------------------------------------------------------------
 
   CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (bool) )
   CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (double) )
@@ -367,14 +388,15 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (uint64_t))
   CAF_ADD_TYPE_ID_FROM_EXPR(core_module, (uint8_t))
 
-  // -- STL types
+  // -- STL types --------------------------------------------------------------
 
   CAF_ADD_TYPE_ID(core_module, (std::string))
   CAF_ADD_TYPE_ID(core_module, (std::u16string))
   CAF_ADD_TYPE_ID(core_module, (std::u32string))
   CAF_ADD_TYPE_ID(core_module, (std::set<std::string>) )
 
-  // -- CAF types
+  // -- CAF types --------------------------------------------------------------
+
   CAF_ADD_TYPE_ID(core_module, (caf::action))
   CAF_ADD_TYPE_ID(core_module, (caf::actor))
   CAF_ADD_TYPE_ID(core_module, (caf::actor_addr))
@@ -383,7 +405,6 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::cow_string))
   CAF_ADD_TYPE_ID(core_module, (caf::cow_u16string))
   CAF_ADD_TYPE_ID(core_module, (caf::cow_u32string))
-  CAF_ADD_TYPE_ID(core_module, (caf::dictionary<caf::config_value>) )
   CAF_ADD_TYPE_ID(core_module, (caf::down_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::error))
   CAF_ADD_TYPE_ID(core_module, (caf::exit_msg))
@@ -397,6 +418,9 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::ipv6_address))
   CAF_ADD_TYPE_ID(core_module, (caf::ipv6_endpoint))
   CAF_ADD_TYPE_ID(core_module, (caf::ipv6_subnet))
+  CAF_ADD_TYPE_ID(core_module, (caf::json_array))
+  CAF_ADD_TYPE_ID(core_module, (caf::json_object))
+  CAF_ADD_TYPE_ID(core_module, (caf::json_value))
   CAF_ADD_TYPE_ID(core_module, (caf::message))
   CAF_ADD_TYPE_ID(core_module, (caf::message_id))
   CAF_ADD_TYPE_ID(core_module, (caf::node_down_msg))
@@ -404,7 +428,16 @@ CAF_BEGIN_TYPE_ID_BLOCK(core_module, 0)
   CAF_ADD_TYPE_ID(core_module, (caf::none_t))
   CAF_ADD_TYPE_ID(core_module, (caf::pec))
   CAF_ADD_TYPE_ID(core_module, (caf::sec))
+  CAF_ADD_TYPE_ID(core_module, (caf::settings))
   CAF_ADD_TYPE_ID(core_module, (caf::shared_action_ptr))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_abort_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_ack_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_batch_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_cancel_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_close_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_demand_msg))
+  CAF_ADD_TYPE_ID(core_module, (caf::stream_open_msg))
   CAF_ADD_TYPE_ID(core_module, (caf::strong_actor_ptr))
   CAF_ADD_TYPE_ID(core_module, (caf::timespan))
   CAF_ADD_TYPE_ID(core_module, (caf::timestamp))

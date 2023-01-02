@@ -115,6 +115,16 @@ public:
     field_type_suffix_ = suffix;
   }
 
+  /// Returns the type ID mapper used by the writer.
+  [[nodiscard]] const type_id_mapper* mapper() const noexcept {
+    return mapper_;
+  }
+
+  /// Changes the type ID mapper for the writer.
+  void mapper(const type_id_mapper* ptr) noexcept {
+    mapper_ = ptr;
+  }
+
   // -- modifiers --------------------------------------------------------------
 
   /// Removes all characters from the buffer and restores the writer to its
@@ -200,7 +210,7 @@ private:
 
   void init();
 
-  // Returns the current top of the stack or `null_literal` if empty.
+  // Returns the current top of the stack or `null` if empty.
   type top();
 
   // Enters a new level of nesting.
@@ -280,7 +290,22 @@ private:
   // Configures whether we omit the top-level '@type' annotation.
   bool skip_object_type_annotation_ = false;
 
+  // Configures how we generate type annotations for fields.
   std::string_view field_type_suffix_ = field_type_suffix_default;
+
+  // The mapper implementation we use by default.
+  default_type_id_mapper default_mapper_;
+
+  // Configures which ID mapper we use to translate between type IDs and names.
+  const type_id_mapper* mapper_ = &default_mapper_;
 };
+
+/// @relates json_writer::type
+CAF_CORE_EXPORT std::string_view as_json_type_name(json_writer::type t);
+
+/// @relates json_writer::type
+constexpr bool can_morph(json_writer::type from, json_writer::type to) {
+  return from == json_writer::type::element && to != json_writer::type::member;
+}
 
 } // namespace caf

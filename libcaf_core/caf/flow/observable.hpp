@@ -19,11 +19,14 @@
 #include "caf/flow/observable_state.hpp"
 #include "caf/flow/observer.hpp"
 #include "caf/flow/op/base.hpp"
+#include "caf/flow/op/buffer.hpp"
 #include "caf/flow/op/concat.hpp"
 #include "caf/flow/op/from_resource.hpp"
 #include "caf/flow/op/from_steps.hpp"
+#include "caf/flow/op/interval.hpp"
 #include "caf/flow/op/merge.hpp"
-#include "caf/flow/op/prefetch.hpp"
+#include "caf/flow/op/never.hpp"
+#include "caf/flow/op/prefix_and_tail.hpp"
 #include "caf/flow/op/publish.hpp"
 #include "caf/flow/step/all.hpp"
 #include "caf/flow/subscription.hpp"
@@ -217,6 +220,15 @@ public:
   /// @copydoc observable::take
   auto take(size_t n) && {
     return add_step(step::take<output_type>{n});
+  }
+
+  /// @copydoc observable::buffer
+  auto buffer(size_t count) && {
+    return materialize().buffer(count);
+  }
+
+  auto buffer(size_t count, timespan period) {
+    return materialize().buffer(count, period);
   }
 
   template <class Predicate>
@@ -566,6 +578,22 @@ observable<T>::take_while(Predicate predicate) {
   return transform(step::take_while{std::move(predicate)});
 }
 
+template <class T>
+observable<cow_vector<T>> observable<T>::buffer(size_t count) {
+  using trait_t = op::buffer_default_trait<T>;
+  using impl_t = op::buffer<trait_t>;
+  return make_observable<impl_t>(ctx(), count, *this,
+                                 make_observable<op::never<unit_t>>(ctx()));
+}
+
+template <class T>
+observable<cow_vector<T>> observable<T>::buffer(size_t count, timespan period) {
+  using trait_t = op::buffer_interval_trait<T>;
+  using impl_t = op::buffer<trait_t>;
+  return make_observable<impl_t>(
+    ctx(), count, *this, make_observable<op::interval>(ctx(), period, period));
+}
+
 // -- observable: combining ----------------------------------------------------
 
 template <class T>
@@ -579,6 +607,9 @@ auto observable<T>::merge(Inputs&&... xs) {
     static_assert(
       sizeof...(Inputs) > 0,
       "merge without arguments expects this observable to emit observables");
+    static_assert(
+      (std::is_same_v<Out, output_type_t<std::decay_t<Inputs>>> && ...),
+      "can only merge observables with the same observed type");
     using impl_t = op::merge<Out>;
     return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
   }
@@ -594,7 +625,10 @@ auto observable<T>::concat(Inputs&&... xs) {
   } else {
     static_assert(
       sizeof...(Inputs) > 0,
-      "merge without arguments expects this observable to emit observables");
+      "concat without arguments expects this observable to emit observables");
+    static_assert(
+      (std::is_same_v<Out, output_type_t<std::decay_t<Inputs>>> && ...),
+      "can only concatenate observables with the same observed type");
     using impl_t = op::concat<Out>;
     return make_observable<impl_t>(ctx(), *this, std::forward<Inputs>(xs)...);
   }
@@ -653,33 +687,19 @@ auto observable<T>::concat_map(F f) {
 template <class T>
 observable<cow_tuple<cow_vector<T>, observable<T>>>
 observable<T>::prefix_and_tail(size_t n) {
-  using vector_t = cow_vector<T>;
-  CAF_ASSERT(n > 0);
-  auto do_prefetch = [](auto in) {
-    auto ptr = op::prefetch<T>::apply(std::move(in).as_observable().pimpl());
-    return observable<T>{std::move(ptr)};
-  };
-  auto split = share(2);
-  auto tail = split.skip(n).compose(do_prefetch);
-  return split //
-    .take(n)
-    .to_vector()
-    .filter([n](const vector_t& xs) { return xs.size() == n; })
-    .map([tail](const vector_t& xs) { return make_cow_tuple(xs, tail); })
-    .as_observable();
+  using impl_t = op::prefix_and_tail<T>;
+  return make_observable<impl_t>(ctx(), as_observable(), n);
 }
 
 template <class T>
 observable<cow_tuple<T, observable<T>>> observable<T>::head_and_tail() {
-  auto do_prefetch = [](auto in) {
-    auto ptr = op::prefetch<T>::apply(std::move(in).as_observable().pimpl());
-    return observable<T>{std::move(ptr)};
-  };
-  auto split = share(2);
-  auto tail = split.skip(1).compose(do_prefetch);
-  return split //
-    .take(1)
-    .map([tail](const T& x) { return make_cow_tuple(x, tail); })
+  using prefix_tuple_t = cow_tuple<cow_vector<T>, observable<T>>;
+  return prefix_and_tail(1)
+    .map([](const prefix_tuple_t& tup) {
+      auto& [vec, obs] = tup.data();
+      CAF_ASSERT(vec.size() == 1);
+      return make_cow_tuple(vec.front(), obs);
+    })
     .as_observable();
 }
 

@@ -13,16 +13,15 @@ namespace {
 
 static constexpr const char class_name[] = "caf::json_writer";
 
-constexpr bool can_morph(json_writer::type from, json_writer::type to) {
-  return from == json_writer::type::element && to != json_writer::type::member;
-}
+constexpr std::string_view json_type_names[] = {"element", "object", "member",
+                                                "array",   "string", "number",
+                                                "bool",    "null"};
 
-constexpr const char* json_type_names[] = {"element", "object", "member",
-                                           "array",   "string", "number",
-                                           "bool",    "null"};
-
-constexpr const char* json_type_name(json_writer::type t) {
-  return json_type_names[static_cast<uint8_t>(t)];
+char last_non_ws_char(const std::vector<char>& buf) {
+  auto not_ws = [](char c) { return !std::isspace(c); };
+  auto last = buf.rend();
+  auto i = std::find_if(buf.rbegin(), last, not_ws);
+  return (i != last) ? *i : '\0';
 }
 
 } // namespace
@@ -85,7 +84,7 @@ bool json_writer::begin_object(type_id_t id, std::string_view name) {
     add(R"_("@type": )_");
     pop();
     CAF_ASSERT(top() == type::element);
-    if (auto tname = query_type_name(id); !tname.empty()) {
+    if (auto tname = (*mapper_)(id); !tname.empty()) {
       add('"');
       add(tname);
       add('"');
@@ -97,7 +96,7 @@ bool json_writer::begin_object(type_id_t id, std::string_view name) {
     pop();
     return true;
   };
-  if (inside_object() || skip_object_type_annotation_)
+  if (skip_object_type_annotation_ || inside_object())
     return begin_associative_array(0);
   else
     return begin_associative_array(0) // Put opening paren, ...
@@ -133,7 +132,7 @@ bool json_writer::begin_field(std::string_view name, bool is_present) {
         return true;
       default: {
         std::string str = "expected object, found ";
-        str += json_type_name(t);
+        str += as_json_type_name(t);
         emplace_error(sec::runtime_error, class_name, __func__, std::move(str));
         return false;
       }
@@ -170,12 +169,12 @@ bool json_writer::begin_field(std::string_view name,
     pop();
     CAF_ASSERT(top() == type::element);
     pop();
-    if (auto tname = query_type_name(types[index]); !tname.empty()) {
+    if (auto tname = (*mapper_)(types[index]); !tname.empty()) {
       add('"');
       add(tname);
       add('"');
     } else {
-      emplace_error(sec::runtime_error, "query_type_name failed");
+      emplace_error(sec::runtime_error, "failed to retrieve type name");
       return false;
     }
     return end_key_value_pair() && begin_field(name);
@@ -215,7 +214,7 @@ bool json_writer::begin_key_value_pair() {
       return true;
     default: {
       std::string str = "expected object, found ";
-      str += json_type_name(t);
+      str += as_json_type_name(t);
       emplace_error(sec::runtime_error, class_name, __func__, std::move(str));
       return false;
     }
@@ -247,7 +246,13 @@ bool json_writer::begin_sequence(size_t) {
 bool json_writer::end_sequence() {
   if (pop_if(type::array)) {
     --indentation_level_;
-    nl();
+    // Check whether the array was empty and compress the output in that case.
+    if (last_non_ws_char(buf_) == '[') {
+      while (std::isspace(buf_.back()))
+        buf_.pop_back();
+    } else {
+      nl();
+    }
     add(']');
     return true;
   } else {
@@ -278,7 +283,13 @@ bool json_writer::begin_associative_array(size_t) {
 bool json_writer::end_associative_array() {
   if (pop_if(type::object)) {
     --indentation_level_;
-    nl();
+    // Check whether the array was empty and compress the output in that case.
+    if (last_non_ws_char(buf_) == '{') {
+      while (std::isspace(buf_.back()))
+        buf_.pop_back();
+    } else {
+      nl();
+    }
     add('}');
     if (!stack_.empty())
       stack_.back().filled = true;
@@ -470,12 +481,12 @@ bool json_writer::pop_if(type t) {
     return true;
   } else {
     std::string str = "pop_if failed: expected ";
-    str += json_type_name(t);
+    str += as_json_type_name(t);
     if (stack_.empty()) {
       str += ", found an empty stack";
     } else {
       str += ", found ";
-      str += json_type_name(stack_.back().t);
+      str += as_json_type_name(stack_.back().t);
     }
     emplace_error(sec::runtime_error, std::move(str));
     return false;
@@ -490,13 +501,13 @@ bool json_writer::pop_if_next(type t) {
     return true;
   } else {
     std::string str = "pop_if_next failed: expected ";
-    str += json_type_name(t);
+    str += as_json_type_name(t);
     if (stack_.size() < 2) {
       str += ", found a stack of size ";
       detail::print(str, stack_.size());
     } else {
       str += ", found ";
-      str += json_type_name(stack_[stack_.size() - 2].t);
+      str += as_json_type_name(stack_[stack_.size() - 2].t);
     }
     emplace_error(sec::runtime_error, std::move(str));
     return false;
@@ -517,9 +528,9 @@ bool json_writer::morph(type t, type& prev) {
       return true;
     } else {
       std::string str = "cannot convert ";
-      str += json_type_name(stack_.back().t);
+      str += as_json_type_name(stack_.back().t);
       str += " to ";
-      str += json_type_name(t);
+      str += as_json_type_name(t);
       emplace_error(sec::runtime_error, std::move(str));
       return false;
     }
@@ -536,7 +547,7 @@ void json_writer::unsafe_morph(type t) {
 
 void json_writer::fail(type t) {
   std::string str = "failed to write a ";
-  str += json_type_name(t);
+  str += as_json_type_name(t);
   str += ": invalid position (begin/end mismatch?)";
   emplace_error(sec::runtime_error, std::move(str));
 }
@@ -568,6 +579,12 @@ void json_writer::sep() {
   } else {
     stack_.back().filled = true;
   }
+}
+
+// -- free functions -----------------------------------------------------------
+
+std::string_view as_json_type_name(json_writer::type t) {
+  return json_type_names[static_cast<uint8_t>(t)];
 }
 
 } // namespace caf

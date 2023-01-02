@@ -1,14 +1,46 @@
+#pragma once
+
+#include "caf/binary_deserializer.hpp"
+#include "caf/binary_serializer.hpp"
+#include "caf/byte_buffer.hpp"
 #include "caf/cow_vector.hpp"
 #include "caf/fwd.hpp"
 #include "caf/result.hpp"
 #include "caf/test/bdd_dsl.hpp"
 #include "caf/type_id.hpp"
 #include "caf/typed_actor.hpp"
+#include "caf/typed_stream.hpp"
 
 #include <cstdint>
 #include <numeric>
 #include <string>
 #include <utility>
+
+// -- utility for testing serialization round-trips ----------------------------
+
+template <class T>
+T deep_copy(const T& val) {
+  using namespace std::literals;
+  caf::byte_buffer buf;
+  {
+    caf::binary_serializer sink{nullptr, buf};
+    if (!sink.apply(val)) {
+      auto msg = "serialization failed in deep_copy: "s;
+      msg += to_string(sink.get_error());
+      CAF_RAISE_ERROR(msg.c_str());
+    }
+  }
+  auto result = T{};
+  {
+    caf::binary_deserializer sink{nullptr, buf};
+    if (!sink.apply(result)) {
+      auto msg = "deserialization failed in deep_copy: "s;
+      msg += to_string(sink.get_error());
+      CAF_RAISE_ERROR(msg.c_str());
+    }
+  }
+  return result;
+}
 
 // -- forward declarations for all unit test suites ----------------------------
 
@@ -420,6 +452,7 @@ bool inspect(Inspector& f, phone_book& x) {
 CAF_BEGIN_TYPE_ID_BLOCK(core_test, caf::first_custom_type_id)
 
   ADD_TYPE_ID((caf::cow_vector<int>) )
+  ADD_TYPE_ID((caf::typed_stream<int32_t>) )
   ADD_TYPE_ID((circle))
   ADD_TYPE_ID((dummy_enum))
   ADD_TYPE_ID((dummy_enum_class))
